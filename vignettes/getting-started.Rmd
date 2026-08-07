@@ -1,0 +1,225 @@
+---
+title: "Getting Started with zentraR"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with zentraR}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+> **Online version.** This guide is also published — and kept current with the
+> API — as the
+> [Getting Started with zentraR](https://docs.zentracloud.io/l/en/article/j1ejykpvpv-getting-started-with-zentra-r)
+> article on ZENTRA Cloud. This vignette ships with the package for offline use.
+
+`zentraR` is an R client for the [ZENTRA Cloud v5 API](https://docs.zentracloud.io).
+It handles authentication, pagination, and time-window formatting, and returns
+readings as a tidy data frame ready for `dplyr` and `ggplot2`.
+
+This vignette covers the full workflow: authenticating, discovering your devices,
+downloading readings, reshaping them, and keeping a local copy up to date. The
+code chunks are not run when the vignette is built (they need your API token and
+network access) — copy them into your own session.
+
+```{r setup}
+library(zentraR)
+```
+
+## 1. Installation
+
+If you are reading this inside R, `zentraR` is already installed. To set it up on
+a new machine, the simplest route is to install from GitLab — this pulls zentraR
+and its dependencies in one step:
+
+```{r}
+# install.packages("remotes")
+remotes::install_gitlab("meter-group-inc/pubpackages/zentraR")
+
+# ...or pin a specific version:
+remotes::install_gitlab("meter-group-inc/pubpackages/zentraR@v0.1.0")
+```
+
+Alternatively, install from a downloaded package file (install the dependencies
+first, then the file, using forward slashes and avoiding `~`):
+
+```{r}
+install.packages(c("httr2", "cli", "rlang", "tibble", "tidyr", "vctrs"))
+install.packages("zentraR_0.1.0.tar.gz", repos = NULL, type = "source")
+```
+
+The full walkthrough (with screenshots) is in the online
+[Getting Started with zentraR](https://docs.zentracloud.io/l/en/article/j1ejykpvpv-getting-started-with-zentra-r)
+article. Then load the package (once per R session):
+
+```{r}
+library(zentraR)
+```
+
+## 2. Authenticate
+
+`zentraR` reads your token from the `ZENTRACLOUD_API_KEY` environment variable.
+`zc_set_key()` sets it for you:
+
+```{r}
+# This session only:
+zc_set_key("your-api-token")
+
+# Persist to ~/.Renviron so every future session finds it automatically:
+zc_set_key("your-api-token", install = TRUE)
+```
+
+If you already set `ZENTRACLOUD_API_KEY` yourself — in `~/.Renviron` or elsewhere
+in your environment — skip `zc_set_key()` entirely.
+
+To generate a token, see
+[API Token](https://docs.zentracloud.io/l/en/article/xot1qptzgz-api-token).
+
+## 3. Discover your devices
+
+`zc_list_devices()` returns one row per device your token can access. Pagination
+is handled for you; all pages are fetched and combined.
+
+```{r}
+devices <- zc_list_devices()
+devices
+```
+
+`expand` attaches additional detail. Pass one or more values as a character
+vector.
+
+```{r}
+zc_list_devices(expand = c("max_min_timestamp", "settings"))
+```
+
+`"max_min_timestamp"` is useful before a backfill: it reports each device's first
+and last measurement time, so you can choose a sensible `start`.
+
+For the available `expand` values and the fields each one adds, see
+[GET List Devices](https://docs.zentracloud.io/l/en/article/7t31rdmwh4-list-devices).
+
+## 4. Download readings
+
+`zc_get_readings()` returns a tidy long data frame — one row per
+(port, measurement, timestamp). Give it a device ID and a time window.
+
+```{r}
+readings <- zc_get_readings("z6-00930", start = Sys.Date() - 7)
+readings
+```
+
+`start` and `end` accept a `Date`, a `POSIXct`, epoch seconds, or an ISO 8601
+string. Values supplied without a timezone are interpreted as UTC.
+
+```{r}
+zc_get_readings(
+  "z6-00930",
+  start = as.POSIXct("2026-05-01", tz = "UTC"),
+  end   = as.POSIXct("2026-06-01", tz = "UTC")
+)
+```
+
+`units` and `direction` map directly to the corresponding query parameters:
+
+```{r}
+zc_get_readings("z6-00930", start = Sys.Date() - 1, units = "imperial", direction = "descending")
+```
+
+For the full parameter reference and response field definitions, see
+[GET Device Readings](https://docs.zentracloud.io/l/en/article/pep98lcz1h-get-device-readings).
+
+### Working with error codes
+
+Each row carries an `error_code`. `zc_label_errors()` joins human-readable labels
+onto a readings data frame, and `zc_error_codes()` returns the lookup table:
+
+```{r}
+zc_label_errors(readings)
+zc_error_codes()
+```
+
+For what each code means, see
+[Device & Sensor Error Codes](https://docs.zentracloud.io/l/en/article/l1uopg3wo7-device-sensor-error-codes).
+
+The tidy long format works directly with the tidyverse:
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+readings |>
+  filter(measurement == "Air Temperature", error_code == 0) |>
+  ggplot(aes(datetime, value)) +
+  geom_line() +
+  labs(y = unique(readings$unit[readings$measurement == "Air Temperature"]))
+```
+
+## 5. Reshape to wide format
+
+`zc_pivot_wider()` produces one row per timestamp and one column per measurement —
+the familiar spreadsheet layout.
+
+```{r}
+zc_pivot_wider(readings)
+```
+
+The wide form drops the per-reading `unit` and `error_code` columns. Keep the long
+form when you need either.
+
+## 6. Keep a local copy up to date
+
+`zc_sync()` records what you already have and fetches only newer readings. A
+*store* determines where that data lives:
+
+- `zc_store_rds()` — native R files, one per device. Types round-trip exactly;
+  best inside an RStudio project.
+- `zc_store_csv()` — plain CSV, one per device. Most accessible to collaborators
+  and non-R tools.
+- `store = NULL` — return-only. Fetches and hands back the data without
+  persisting it, for loading into your own database.
+
+```{r}
+store <- zc_store_csv("data/zentra")
+
+# First run — backfill from `start`, or from each device's first measurement if omitted:
+zc_sync("z6-00930", store = store, start = Sys.Date() - 30)
+
+# Later runs — only what's new since last time:
+zc_sync("z6-00930", store = store)
+
+# Every device your token can access, in one call:
+zc_sync(store = store)
+
+# Read the accumulated record back into R:
+all_data <- zc_store_read(store)
+```
+
+With a store, `zc_sync()` returns a per-device summary (rows added, latest
+timestamp, status). With `store = NULL` it returns the combined new readings
+instead.
+
+## Next steps
+
+New to R? The *Working with Your Data in R* vignette covers the everyday commands
+for viewing, filtering, summarising, and exporting your readings — also published
+online as
+[Working with Your Data in R](https://docs.zentracloud.io/l/en/article/bohtqxbqrm-working-with-your-data-in-r):
+
+```{r}
+vignette("working-with-data", package = "zentraR")
+```
+
+To run syncs automatically — on project open, daily, or weekly — see the
+*Scheduling automatic syncs* vignette, also published online as
+[Scheduling Automatic Syncs](https://docs.zentracloud.io/l/en/article/f2g5u9hc2r-scheduling-automatic-syncs):
+
+```{r}
+vignette("scheduling", package = "zentraR")
+```

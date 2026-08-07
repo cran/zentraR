@@ -1,0 +1,156 @@
+---
+title: "Scheduling Automatic Syncs"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Scheduling Automatic Syncs}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+> **Online version.** This guide is also published — and kept current with the
+> API — as the
+> [Scheduling Automatic Syncs](https://docs.zentracloud.io/l/en/article/f2g5u9hc2r-scheduling-automatic-syncs)
+> article on ZENTRA Cloud. This vignette ships with the package for offline use.
+
+Once you have a `zc_sync()` call that keeps a local store up to date, you can run
+it automatically — when you open a project, once a day, or once a week.
+
+`zentraR` deliberately does **not** bundle a scheduler. Instead, `zc_sync()` is
+designed to be called from a small, self-contained script that you schedule with
+the standard tool for your platform.
+
+If you haven't set up a sync yet, start with the *Getting Started with zentraR*
+vignette (`vignette("getting-started", package = "zentraR")`), also published as
+[Getting Started with zentraR](https://docs.zentracloud.io/l/en/article/j1ejykpvpv-getting-started-with-zentra-r).
+
+## A reusable sync script
+
+Save this as `sync_zentra.R` in your project. It reads the token from the
+environment, syncs every accessible device into a CSV store, and logs a one-line
+summary.
+
+```{r}
+#!/usr/bin/env Rscript
+# sync_zentra.R — fetch new ZENTRA Cloud readings into a local store.
+
+library(zentraR)
+
+# The token comes from the ZENTRACLOUD_API_KEY environment variable
+# (set it in ~/.Renviron, or via zc_set_key(..., install = TRUE) once).
+
+store <- zc_store_csv("data/zentra")
+
+summary <- zc_sync(store = store, quiet = TRUE)
+
+message(
+  format(Sys.time()), "  synced ", nrow(summary), " device(s), ",
+  sum(summary$rows_added), " new reading(s)"
+)
+```
+
+Test it from a terminal before scheduling it:
+
+```sh
+Rscript sync_zentra.R
+```
+
+Because `zc_sync()` is incremental, running it more often simply means smaller,
+faster updates — it never re-downloads what you already have.
+
+## Option A — sync when you open a project (RStudio / `.Rprofile`)
+
+To refresh data every time you start R in a project, add this to the project's
+`.Rprofile`. Running it in a background R session keeps startup snappy.
+
+```{r}
+# .Rprofile
+setHook("rstudio.sessionInit", function(newSession) {
+  if (newSession && nzchar(Sys.getenv("ZENTRACLOUD_API_KEY"))) {
+    message("Refreshing ZENTRA Cloud data in the background…")
+    system2("Rscript", "sync_zentra.R", wait = FALSE)
+  }
+}, action = "append")
+```
+
+Outside RStudio, call the script directly at the end of `.Rprofile` instead:
+
+```{r}
+if (interactive() && nzchar(Sys.getenv("ZENTRACLOUD_API_KEY"))) {
+  try(source("sync_zentra.R"))
+}
+```
+
+## Option B — daily on macOS / Linux (cron via cronR)
+
+The [`cronR`](https://cran.r-project.org/package=cronR) package registers cron
+jobs from R. This schedules the script to run every morning at 6am:
+
+```{r}
+# install.packages("cronR")
+library(cronR)
+
+cmd <- cron_rscript(normalizePath("sync_zentra.R"))
+cron_add(cmd, frequency = "daily", at = "06:00", id = "zentra_sync",
+         description = "Daily ZENTRA Cloud sync")
+
+# Manage it later:
+cron_ls()
+# cron_rm("zentra_sync")
+```
+
+`ZENTRACLOUD_API_KEY` must be visible to the cron environment. The simplest route
+is to keep it in `~/.Renviron`, which R reads on startup regardless of how the
+session was launched.
+
+## Option C — daily on Windows (Task Scheduler)
+
+On Windows, use the built-in Task Scheduler. The
+[`taskscheduleR`](https://cran.r-project.org/package=taskscheduleR) package wraps
+it from R:
+
+```{r}
+# install.packages("taskscheduleR")
+library(taskscheduleR)
+
+taskscheduler_create(
+  taskname = "zentra_sync",
+  rscript  = normalizePath("sync_zentra.R"),
+  schedule = "DAILY",
+  starttime = "06:00"
+)
+
+# Remove it later:
+# taskscheduler_delete("zentra_sync")
+```
+
+To set it up by hand instead, create a Basic Task that runs:
+
+```
+"C:\Program Files\R\R-4.6.1\bin\Rscript.exe" "C:\path\to\sync_zentra.R"
+```
+
+on your preferred trigger. Set `ZENTRACLOUD_API_KEY` as a user environment
+variable, or rely on `~/.Renviron`, so the scheduled task can authenticate.
+
+## Tips
+
+- **Keep the token out of the script.** Store it in `~/.Renviron` as
+  `ZENTRACLOUD_API_KEY=...`; every scheduled run picks it up from there. See
+  [API Token](https://docs.zentracloud.io/l/en/article/xot1qptzgz-api-token).
+- **Backfill once, then top up.** Run a single `zc_sync(..., start =)`
+  interactively to seed history. Routine runs then fetch only new data.
+- **Don't schedule more often than your loggers upload.** The client paces its
+  own requests, so syncing many devices at once is fine, but there's nothing to
+  fetch between uploads. See
+  [Rate Limiting](https://docs.zentracloud.io/l/en/article/f6wdg770d3-rate-limiting)
+  for the limits it observes.
+- **Check the summary.** When a store is used, `zc_sync()` returns a per-device
+  summary with a `status` column. Log it to catch devices that fail to sync.

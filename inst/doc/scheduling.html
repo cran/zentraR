@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Scheduling Automatic Syncs</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Scheduling Automatic Syncs</h1>
+
+
+
+<blockquote>
+<p><strong>Online version.</strong> This guide is also published — and
+kept current with the API — as the <a href="https://docs.zentracloud.io/l/en/article/f2g5u9hc2r-scheduling-automatic-syncs">Scheduling
+Automatic Syncs</a> article on ZENTRA Cloud. This vignette ships with
+the package for offline use.</p>
+</blockquote>
+<p>Once you have a <code>zc_sync()</code> call that keeps a local store
+up to date, you can run it automatically — when you open a project, once
+a day, or once a week.</p>
+<p><code>zentraR</code> deliberately does <strong>not</strong> bundle a
+scheduler. Instead, <code>zc_sync()</code> is designed to be called from
+a small, self-contained script that you schedule with the standard tool
+for your platform.</p>
+<p>If you haven’t set up a sync yet, start with the <em>Getting Started
+with zentraR</em> vignette
+(<code>vignette(&quot;getting-started&quot;, package = &quot;zentraR&quot;)</code>), also
+published as <a href="https://docs.zentracloud.io/l/en/article/j1ejykpvpv-getting-started-with-zentra-r">Getting
+Started with zentraR</a>.</p>
+<div id="a-reusable-sync-script" class="section level2">
+<h2>A reusable sync script</h2>
+<p>Save this as <code>sync_zentra.R</code> in your project. It reads the
+token from the environment, syncs every accessible device into a CSV
+store, and logs a one-line summary.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co">#!/usr/bin/env Rscript</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="co"># sync_zentra.R — fetch new ZENTRA Cloud readings into a local store.</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="fu">library</span>(zentraR)</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="co"># The token comes from the ZENTRACLOUD_API_KEY environment variable</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="co"># (set it in ~/.Renviron, or via zc_set_key(..., install = TRUE) once).</span></span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>store <span class="ot">&lt;-</span> <span class="fu">zc_store_csv</span>(<span class="st">&quot;data/zentra&quot;</span>)</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>summary <span class="ot">&lt;-</span> <span class="fu">zc_sync</span>(<span class="at">store =</span> store, <span class="at">quiet =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a><span class="fu">message</span>(</span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a>  <span class="fu">format</span>(<span class="fu">Sys.time</span>()), <span class="st">&quot;  synced &quot;</span>, <span class="fu">nrow</span>(summary), <span class="st">&quot; device(s), &quot;</span>,</span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>  <span class="fu">sum</span>(summary<span class="sc">$</span>rows_added), <span class="st">&quot; new reading(s)&quot;</span></span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a>)</span></code></pre></div>
+<p>Test it from a terminal before scheduling it:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="ex">Rscript</span> sync_zentra.R</span></code></pre></div>
+<p>Because <code>zc_sync()</code> is incremental, running it more often
+simply means smaller, faster updates — it never re-downloads what you
+already have.</p>
+</div>
+<div id="option-a-sync-when-you-open-a-project-rstudio-.rprofile" class="section level2">
+<h2>Option A — sync when you open a project (RStudio /
+<code>.Rprofile</code>)</h2>
+<p>To refresh data every time you start R in a project, add this to the
+project’s <code>.Rprofile</code>. Running it in a background R session
+keeps startup snappy.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># .Rprofile</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">setHook</span>(<span class="st">&quot;rstudio.sessionInit&quot;</span>, <span class="cf">function</span>(newSession) {</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="cf">if</span> (newSession <span class="sc">&amp;&amp;</span> <span class="fu">nzchar</span>(<span class="fu">Sys.getenv</span>(<span class="st">&quot;ZENTRACLOUD_API_KEY&quot;</span>))) {</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">&quot;Refreshing ZENTRA Cloud data in the background…&quot;</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>    <span class="fu">system2</span>(<span class="st">&quot;Rscript&quot;</span>, <span class="st">&quot;sync_zentra.R&quot;</span>, <span class="at">wait =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  }</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>}, <span class="at">action =</span> <span class="st">&quot;append&quot;</span>)</span></code></pre></div>
+<p>Outside RStudio, call the script directly at the end of
+<code>.Rprofile</code> instead:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">interactive</span>() <span class="sc">&amp;&amp;</span> <span class="fu">nzchar</span>(<span class="fu">Sys.getenv</span>(<span class="st">&quot;ZENTRACLOUD_API_KEY&quot;</span>))) {</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="fu">try</span>(<span class="fu">source</span>(<span class="st">&quot;sync_zentra.R&quot;</span>))</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="option-b-daily-on-macos-linux-cron-via-cronr" class="section level2">
+<h2>Option B — daily on macOS / Linux (cron via cronR)</h2>
+<p>The <a href="https://cran.r-project.org/package=cronR"><code>cronR</code></a>
+package registers cron jobs from R. This schedules the script to run
+every morning at 6am:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># install.packages(&quot;cronR&quot;)</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="fu">library</span>(cronR)</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>cmd <span class="ot">&lt;-</span> <span class="fu">cron_rscript</span>(<span class="fu">normalizePath</span>(<span class="st">&quot;sync_zentra.R&quot;</span>))</span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="fu">cron_add</span>(cmd, <span class="at">frequency =</span> <span class="st">&quot;daily&quot;</span>, <span class="at">at =</span> <span class="st">&quot;06:00&quot;</span>, <span class="at">id =</span> <span class="st">&quot;zentra_sync&quot;</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>         <span class="at">description =</span> <span class="st">&quot;Daily ZENTRA Cloud sync&quot;</span>)</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="co"># Manage it later:</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="fu">cron_ls</span>()</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a><span class="co"># cron_rm(&quot;zentra_sync&quot;)</span></span></code></pre></div>
+<p><code>ZENTRACLOUD_API_KEY</code> must be visible to the cron
+environment. The simplest route is to keep it in
+<code>~/.Renviron</code>, which R reads on startup regardless of how the
+session was launched.</p>
+</div>
+<div id="option-c-daily-on-windows-task-scheduler" class="section level2">
+<h2>Option C — daily on Windows (Task Scheduler)</h2>
+<p>On Windows, use the built-in Task Scheduler. The <a href="https://cran.r-project.org/package=taskscheduleR"><code>taskscheduleR</code></a>
+package wraps it from R:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co"># install.packages(&quot;taskscheduleR&quot;)</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="fu">library</span>(taskscheduleR)</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="fu">taskscheduler_create</span>(</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="at">taskname =</span> <span class="st">&quot;zentra_sync&quot;</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>  <span class="at">rscript  =</span> <span class="fu">normalizePath</span>(<span class="st">&quot;sync_zentra.R&quot;</span>),</span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  <span class="at">schedule =</span> <span class="st">&quot;DAILY&quot;</span>,</span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>  <span class="at">starttime =</span> <span class="st">&quot;06:00&quot;</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>)</span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a><span class="co"># Remove it later:</span></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a><span class="co"># taskscheduler_delete(&quot;zentra_sync&quot;)</span></span></code></pre></div>
+<p>To set it up by hand instead, create a Basic Task that runs:</p>
+<pre><code>&quot;C:\Program Files\R\R-4.6.1\bin\Rscript.exe&quot; &quot;C:\path\to\sync_zentra.R&quot;</code></pre>
+<p>on your preferred trigger. Set <code>ZENTRACLOUD_API_KEY</code> as a
+user environment variable, or rely on <code>~/.Renviron</code>, so the
+scheduled task can authenticate.</p>
+</div>
+<div id="tips" class="section level2">
+<h2>Tips</h2>
+<ul>
+<li><strong>Keep the token out of the script.</strong> Store it in
+<code>~/.Renviron</code> as <code>ZENTRACLOUD_API_KEY=...</code>; every
+scheduled run picks it up from there. See <a href="https://docs.zentracloud.io/l/en/article/xot1qptzgz-api-token">API
+Token</a>.</li>
+<li><strong>Backfill once, then top up.</strong> Run a single
+<code>zc_sync(..., start =)</code> interactively to seed history.
+Routine runs then fetch only new data.</li>
+<li><strong>Don’t schedule more often than your loggers upload.</strong>
+The client paces its own requests, so syncing many devices at once is
+fine, but there’s nothing to fetch between uploads. See <a href="https://docs.zentracloud.io/l/en/article/f6wdg770d3-rate-limiting">Rate
+Limiting</a> for the limits it observes.</li>
+<li><strong>Check the summary.</strong> When a store is used,
+<code>zc_sync()</code> returns a per-device summary with a
+<code>status</code> column. Log it to catch devices that fail to
+sync.</li>
+</ul>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>
