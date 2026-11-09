@@ -8,10 +8,10 @@
 #' `install = TRUE` to also save it to your user `.Renviron` file so it is
 #' available in every future session.
 #'
-#' Get your key from ZENTRA Cloud: **User Account -> Integrations -> Show
-#' Token** (<https://app.zentracloud.io/profile/integrations>). Treat it like a
-#' password. Regenerating it in ZENTRA Cloud immediately invalidates the old
-#' key.
+#' Get your key from ZENTRA Cloud: **your name (top right) -> Integrations ->
+#' Show Token** (<https://app.zentracloud.io/profile/integrations>). Treat it
+#' like a password. Regenerating it in ZENTRA Cloud immediately invalidates the
+#' old key.
 #'
 #' @param key Your API key, as a string.
 #' @param install If `TRUE`, write the key to your user `.Renviron` as

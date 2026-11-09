@@ -5,11 +5,11 @@
 #' retrieved automatically, and the request is paced to respect the API rate
 #' limit.
 #'
-#' Specify the time window with `start`/`end` (any of a [Date], [POSIXct],
-#' numeric epoch seconds, or an ISO 8601 string) **or** with `start_timestamp`/
-#' `end_timestamp` (epoch seconds) - but not both. All datetimes are normalised
-#' to UTC. If you omit the window, the API returns its default (most recent)
-#' window.
+#' Specify the time window in exactly one of three ways: `start`/`end` (any of a
+#' [Date], [POSIXct], numeric epoch seconds, or an ISO 8601 string),
+#' `start_timestamp`/`end_timestamp` (epoch seconds), or `window` (a relative
+#' range measured back from now, e.g. `"24h"`). All datetimes are normalised to
+#' UTC. If you omit the window, the API returns its default (most recent) window.
 #'
 #' @param device_id Device identifier (string), e.g. `"z6-00930"` or
 #'   `"A4100110"`. See [zc_list_devices()].
@@ -18,6 +18,11 @@
 #'   timezone is present.
 #' @param start_timestamp,end_timestamp Alternative window as Unix epoch seconds
 #'   (UTC). Mutually exclusive with `start`/`end`.
+#' @param window Alternative window given as a relative range measured back from
+#'   the time of the request (server time, UTC), written as `"<n><unit>"` where
+#'   `<unit>` is `m` (minutes), `h` (hours), `d` (days), or `w` (weeks) - for
+#'   example `"24h"` for the last 24 hours. Must resolve to one year or less
+#'   (at most `"365d"` or `"52w"`). Mutually exclusive with the other two forms.
 #' @param direction Sort order by time: `"ascending"` (default) or
 #'   `"descending"`.
 #' @param units `"metric"` (default) or `"imperial"`.
@@ -44,6 +49,9 @@
 #' # Last 7 days:
 #' zc_get_readings("z6-00930", start = Sys.Date() - 7)
 #'
+#' # The same, as a relative window measured back from now:
+#' zc_get_readings("z6-00930", window = "7d")
+#'
 #' # An explicit window:
 #' zc_get_readings(
 #'   "z6-00930",
@@ -56,6 +64,7 @@ zc_get_readings <- function(device_id,
                             end = NULL,
                             start_timestamp = NULL,
                             end_timestamp = NULL,
+                            window = NULL,
                             direction = "ascending",
                             units = "metric",
                             max_pages = Inf,
@@ -71,9 +80,9 @@ zc_get_readings <- function(device_id,
   direction <- zc_match_arg(direction, c("ascending", "descending"))
   units <- zc_match_arg(units, c("metric", "imperial"))
 
-  window <- zc_window_query(start, end, start_timestamp, end_timestamp)
+  window_query <- zc_window_query(start, end, start_timestamp, end_timestamp, window)
   zc_readings_fetch(
-    device_id = device_id, window = window, direction = direction,
+    device_id = device_id, window_query = window_query, direction = direction,
     units = units, max_pages = max_pages, key = key, progress = progress
   )
 }
@@ -84,7 +93,7 @@ zc_get_readings <- function(device_id,
 # `on_page` is supplied it is called with each page's tibble (used by zc_sync()
 # to persist progressively, so an interruption never loses committed pages) and
 # the function returns invisibly. Otherwise all pages are combined and returned.
-zc_readings_fetch <- function(device_id, window, direction = "ascending",
+zc_readings_fetch <- function(device_id, window_query, direction = "ascending",
                               units = "metric", max_pages = Inf, key = NULL,
                               on_page = NULL, progress = NULL) {
   show_pb <- zc_use_progress(progress, active_default = is.null(on_page) && interactive())
@@ -112,7 +121,7 @@ zc_readings_fetch <- function(device_id, window, direction = "ascending",
   }
 
   repeat {
-    query <- c(window, drop_null(list(
+    query <- c(window_query, drop_null(list(
       direction = direction,
       units = units,
       next_token = next_token

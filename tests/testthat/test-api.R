@@ -287,3 +287,39 @@ test_that("zc_sync reports per-device errors without aborting the run", {
   expect_equal(s$status[s$device_id == "BAD"], "error")
   expect_equal(nrow(zc_store_read(store, "GOOD")), 1)
 })
+
+test_that("zc_get_readings sends the relative window on every page", {
+  local_test_key()
+  seen <- character()
+  httr2::local_mocked_responses(function(req) {
+    seen <<- c(seen, req_query(req, "window") %||% NA_character_)
+    tok <- req_query(req, "next_token")
+    if (is.null(tok)) {
+      mock_response(list(
+        metadata = list(device_id = "d"),
+        values = list(mock_reading("Air Temperature", 1, 100)),
+        pagination = list(num_readings = 1L, next_token = "PAGE2")
+      ))
+    } else {
+      mock_response(list(
+        metadata = list(device_id = "d"),
+        values = list(mock_reading("Air Temperature", 2, 200)),
+        pagination = list(num_readings = 1L, next_token = NULL)
+      ))
+    }
+  })
+  r <- zc_get_readings("d", window = "24h", key = "test-key")
+  expect_equal(nrow(r), 2)
+  expect_equal(seen, c("24h", "24h"))
+})
+
+test_that("zc_get_readings rejects an out-of-range window before requesting", {
+  local_test_key()
+  httr2::local_mocked_responses(function(req) {
+    stop("no request should be made")
+  })
+  expect_error(
+    zc_get_readings("d", window = "400d", key = "test-key"),
+    class = "zentraR_invalid_request_error"
+  )
+})

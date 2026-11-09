@@ -1,6 +1,6 @@
 Package: zentraR
 Title: R Client for the ZENTRA Cloud V5 API
-Version: 0.1.3
+Version: 0.1.4
 Authors@R: c(
     person("Travis", "Bates", email = "travis@metergroup.com",
            role = c("aut", "cre")),
@@ -23,9 +23,9 @@ URL: https://gitlab.com/meter-group-inc/pubpackages/zentraR
 BugReports: https://gitlab.com/meter-group-inc/pubpackages/zentraR/-/work_items
 Config/roxygen2/version: 8.0.0
 NeedsCompilation: no
-Packaged: 2026-07-30 18:31:17 UTC; travis
+Packaged: 2026-11-09 19:16:45 UTC; travis
 Author: Travis Bates [aut, cre],
   METER Group, Inc. [cph, fnd]
 Maintainer: Travis Bates <travis@metergroup.com>
 Repository: CRAN
-Date/Publication: 2026-08-07 17:20:02 UTC
+Date/Publication: 2026-11-09 20:20:02 UTC

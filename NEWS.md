@@ -1,3 +1,18 @@
+# zentraR 0.1.4
+
+* `zc_get_readings(window = "24h")` requests a relative time range measured back
+  from the moment of the request, using the readings endpoint's new `window`
+  parameter. Write it as a whole number plus `m`, `h`, `d`, or `w`; it must
+  resolve to one year or less (`"365d"` or `"52w"`), which is checked locally
+  before the request is sent. It is an alternative to `start`/`end` and
+  `start_timestamp`/`end_timestamp`, not a supplement — supplying more than one
+  form is an error.
+
+* The `zc_set_key()` help page and the README now give the real menu path to
+  your API token in ZENTRA Cloud: select your name at the top right, then
+  **Integrations**, then **Show Token**. They previously named a
+  "User Account" menu item that does not exist.
+
 # zentraR 0.1.3
 
 * Documentation and metadata polish for the first CRAN submission (title

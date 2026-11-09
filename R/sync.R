@@ -171,8 +171,8 @@ zc_sync_one <- function(dev, store, start, end, units, direction, max_pages, key
 
   res <- tryCatch(
     {
-      window <- zc_window_query(start = from, end = end)
-      zc_readings_fetch(dev, window, direction, units, max_pages, key,
+      window_query <- zc_window_query(start = from, end = end)
+      zc_readings_fetch(dev, window_query, direction, units, max_pages, key,
                         on_page = on_page, progress = show_progress)
       list(status = "ok", message = NA_character_)
     },

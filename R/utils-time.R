@@ -65,21 +65,82 @@ zc_to_epoch <- function(x, arg = "timestamp") {
   )
 }
 
-# Build the query parameters describing the requested time window. Accepts
-# datetime-style inputs (start/end) or explicit epoch timestamps, but not both.
-zc_window_query <- function(start = NULL, end = NULL,
-                            start_timestamp = NULL, end_timestamp = NULL) {
-  has_dt <- !is.null(start) || !is.null(end)
-  has_ts <- !is.null(start_timestamp) || !is.null(end_timestamp)
-
-  if (has_dt && has_ts) {
+# Validate a relative window string (`<n><unit>`, e.g. "24h") against the syntax
+# the v5 readings endpoint accepts, and against its one-year ceiling. Returns the
+# normalised (trimmed, lower-case) string so the query always carries the exact
+# form the API documents.
+zc_validate_window <- function(x, arg = "window") {
+  if (is.null(x)) {
+    return(NULL)
+  }
+  if (!is_string(x)) {
+    cli::cli_abort(
+      "{.arg {arg}} must be a single string like {.val 24h}.",
+      class = "zentraR_invalid_request_error"
+    )
+  }
+  x <- tolower(trimws(x))
+  m <- regmatches(x, regexec("^([0-9]+)([mhdw])$", x))[[1]]
+  if (length(m) != 3) {
     cli::cli_abort(
       c(
-        "Provide either {.arg start}/{.arg end} or {.arg start_timestamp}/{.arg end_timestamp}, not both.",
-        "i" = "The v5 API accepts datetimes or Unix timestamps for the window, but not a mix."
+        "{.arg {arg}} must be a whole number followed by a unit, e.g. {.val 24h}.",
+        "i" = "Units are {.val m} (minutes), {.val h} (hours), {.val d} (days), or {.val w} (weeks).",
+        "x" = "Got {.val {x}}."
       ),
       class = "zentraR_invalid_request_error"
     )
+  }
+
+  n <- as.numeric(m[[2]])
+  unit <- m[[3]]
+  unit_name <- zc_window_units[[unit]]
+  max_n <- zc_window_max[[unit]]
+  if (n == 0) {
+    cli::cli_abort(
+      "{.arg {arg}} must be a positive number of {unit_name}; got {.val {x}}.",
+      class = "zentraR_invalid_request_error"
+    )
+  }
+  if (n > max_n) {
+    cli::cli_abort(
+      c(
+        "{.arg {arg}} must resolve to one year or less (at most {.val 365d} or {.val 52w}).",
+        "x" = "Got {.val {x}}; the maximum in {unit_name} is {max_n}{unit}."
+      ),
+      class = "zentraR_invalid_request_error"
+    )
+  }
+
+  paste0(m[[2]], unit)
+}
+
+# The supported units, and one year expressed in each of them.
+zc_window_units <- c(m = "minutes", h = "hours", d = "days", w = "weeks")
+zc_window_max <- c(m = 525600, h = 8760, d = 365, w = 52)
+
+# Build the query parameters describing the requested time window. Accepts
+# datetime-style inputs (start/end), explicit epoch timestamps, or a relative
+# window measured back from now - but only one of the three.
+zc_window_query <- function(start = NULL, end = NULL,
+                            start_timestamp = NULL, end_timestamp = NULL,
+                            window = NULL) {
+  has_dt <- !is.null(start) || !is.null(end)
+  has_ts <- !is.null(start_timestamp) || !is.null(end_timestamp)
+  has_rel <- !is.null(window)
+
+  if (has_dt + has_ts + has_rel > 1) {
+    cli::cli_abort(
+      c(
+        "Provide only one of {.arg start}/{.arg end}, {.arg start_timestamp}/{.arg end_timestamp}, or {.arg window}.",
+        "i" = "The v5 API accepts datetimes, Unix timestamps, or a relative window, but not a mix."
+      ),
+      class = "zentraR_invalid_request_error"
+    )
+  }
+
+  if (has_rel) {
+    return(list(window = zc_validate_window(window)))
   }
 
   if (has_ts) {

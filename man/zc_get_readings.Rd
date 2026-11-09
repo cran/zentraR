@@ -10,6 +10,7 @@ zc_get_readings(
   end = NULL,
   start_timestamp = NULL,
   end_timestamp = NULL,
+  window = NULL,
   direction = "ascending",
   units = "metric",
   max_pages = Inf,
@@ -27,6 +28,12 @@ timezone is present.}
 
 \item{start_timestamp, end_timestamp}{Alternative window as Unix epoch seconds
 (UTC). Mutually exclusive with \code{start}/\code{end}.}
+
+\item{window}{Alternative window given as a relative range measured back from
+the time of the request (server time, UTC), written as \code{"<n><unit>"} where
+\verb{<unit>} is \code{m} (minutes), \code{h} (hours), \code{d} (days), or \code{w} (weeks) - for
+example \code{"24h"} for the last 24 hours. Must resolve to one year or less
+(at most \code{"365d"} or \code{"52w"}). Mutually exclusive with the other two forms.}
 
 \item{direction}{Sort order by time: \code{"ascending"} (default) or
 \code{"descending"}.}
@@ -58,11 +65,11 @@ retrieved automatically, and the request is paced to respect the API rate
 limit.
 }
 \details{
-Specify the time window with \code{start}/\code{end} (any of a \link{Date}, \link{POSIXct},
-numeric epoch seconds, or an ISO 8601 string) \strong{or} with \code{start_timestamp}/
-\code{end_timestamp} (epoch seconds) - but not both. All datetimes are normalised
-to UTC. If you omit the window, the API returns its default (most recent)
-window.
+Specify the time window in exactly one of three ways: \code{start}/\code{end} (any of a
+\link{Date}, \link{POSIXct}, numeric epoch seconds, or an ISO 8601 string),
+\code{start_timestamp}/\code{end_timestamp} (epoch seconds), or \code{window} (a relative
+range measured back from now, e.g. \code{"24h"}). All datetimes are normalised to
+UTC. If you omit the window, the API returns its default (most recent) window.
 }
 \examples{
 \dontrun{
@@ -70,6 +77,9 @@ zc_set_key("my-secret-key")
 
 # Last 7 days:
 zc_get_readings("z6-00930", start = Sys.Date() - 7)
+
+# The same, as a relative window measured back from now:
+zc_get_readings("z6-00930", window = "7d")
 
 # An explicit window:
 zc_get_readings(

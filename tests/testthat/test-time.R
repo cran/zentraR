@@ -50,3 +50,65 @@ test_that("zc_window_query rejects mixing datetimes and timestamps", {
 test_that("zc_window_query is empty when nothing supplied", {
   expect_length(zentraR:::zc_window_query(), 0)
 })
+
+test_that("zc_validate_window accepts each supported unit", {
+  expect_equal(zentraR:::zc_validate_window("30m"), "30m")
+  expect_equal(zentraR:::zc_validate_window("24h"), "24h")
+  expect_equal(zentraR:::zc_validate_window("7d"), "7d")
+  expect_equal(zentraR:::zc_validate_window("2w"), "2w")
+  expect_null(zentraR:::zc_validate_window(NULL))
+})
+
+test_that("zc_validate_window normalises case and surrounding whitespace", {
+  expect_equal(zentraR:::zc_validate_window(" 24H "), "24h")
+})
+
+test_that("zc_validate_window accepts the one-year maximum for every unit", {
+  expect_equal(zentraR:::zc_validate_window("525600m"), "525600m")
+  expect_equal(zentraR:::zc_validate_window("8760h"), "8760h")
+  expect_equal(zentraR:::zc_validate_window("365d"), "365d")
+  expect_equal(zentraR:::zc_validate_window("52w"), "52w")
+})
+
+test_that("zc_validate_window rejects windows longer than one year", {
+  expect_error(zentraR:::zc_validate_window("366d"), class = "zentraR_invalid_request_error")
+  expect_error(zentraR:::zc_validate_window("53w"), class = "zentraR_invalid_request_error")
+  expect_error(zentraR:::zc_validate_window("8761h"), class = "zentraR_invalid_request_error")
+  expect_error(zentraR:::zc_validate_window("525601m"), class = "zentraR_invalid_request_error")
+})
+
+test_that("zc_validate_window rejects a zero-length window", {
+  expect_error(zentraR:::zc_validate_window("0h"), class = "zentraR_invalid_request_error")
+})
+
+test_that("zc_validate_window rejects malformed windows", {
+  expect_error(zentraR:::zc_validate_window("7 days"), class = "zentraR_invalid_request_error")
+  expect_error(zentraR:::zc_validate_window("7"), class = "zentraR_invalid_request_error")
+  expect_error(zentraR:::zc_validate_window("d"), class = "zentraR_invalid_request_error")
+  expect_error(zentraR:::zc_validate_window("1.5d"), class = "zentraR_invalid_request_error")
+  expect_error(zentraR:::zc_validate_window("-1d"), class = "zentraR_invalid_request_error")
+  expect_error(zentraR:::zc_validate_window("7y"), class = "zentraR_invalid_request_error")
+  expect_error(zentraR:::zc_validate_window(""), class = "zentraR_invalid_request_error")
+  expect_error(zentraR:::zc_validate_window(7), class = "zentraR_invalid_request_error")
+  expect_error(zentraR:::zc_validate_window(c("1d", "2d")), class = "zentraR_invalid_request_error")
+})
+
+test_that("zc_window_query builds a relative window param", {
+  q <- zentraR:::zc_window_query(window = "24h")
+  expect_named(q, "window")
+  expect_equal(q$window, "24h")
+})
+
+test_that("zc_window_query rejects mixing window with datetimes", {
+  expect_error(
+    zentraR:::zc_window_query(start = as.Date("2026-01-01"), window = "24h"),
+    class = "zentraR_invalid_request_error"
+  )
+})
+
+test_that("zc_window_query rejects mixing window with timestamps", {
+  expect_error(
+    zentraR:::zc_window_query(start_timestamp = 1000, window = "24h"),
+    class = "zentraR_invalid_request_error"
+  )
+})

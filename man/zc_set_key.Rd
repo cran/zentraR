@@ -25,10 +25,10 @@ authenticate. By default the key is kept for the current R session only. Set
 available in every future session.
 }
 \details{
-Get your key from ZENTRA Cloud: \strong{User Account -> Integrations -> Show
-Token} (\url{https://app.zentracloud.io/profile/integrations}). Treat it like a
-password. Regenerating it in ZENTRA Cloud immediately invalidates the old
-key.
+Get your key from ZENTRA Cloud: \strong{your name (top right) -> Integrations ->
+Show Token} (\url{https://app.zentracloud.io/profile/integrations}). Treat it
+like a password. Regenerating it in ZENTRA Cloud immediately invalidates the
+old key.
 }
 \examples{
 \dontrun{

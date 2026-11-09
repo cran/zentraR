@@ -26,7 +26,7 @@ zc_sync_parallel <- function(device_id, store, start, end, units, direction,
     }
     from <- zc_sync_from(dev, last, start, get_meta)
     st[[dev]] <- list(
-      window = zc_window_query(start = from, end = end),
+      window_query = zc_window_query(start = from, end = end),
       next_token = NULL, done = FALSE, errored = FALSE, ready_at = 0,
       added = 0L, max_ts = if (is.na(last)) NA_real_ else last, pages = 0L,
       message = NA_character_, data = list(), resolved_id = NULL
@@ -59,7 +59,7 @@ zc_sync_parallel <- function(device_id, store, start, end, units, direction,
 
     reqs <- lapply(ready, function(d) {
       s <- st[[d]]
-      query <- c(s$window, drop_null(list(
+      query <- c(s$window_query, drop_null(list(
         direction = direction, units = units, next_token = s$next_token
       )))
       zc_req(c("devices", d, "data"), query = query, key = key)

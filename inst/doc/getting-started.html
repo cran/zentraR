@@ -426,9 +426,17 @@ supplied without a timezone are interpreted as UTC.</p>
 <span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="at">start =</span> <span class="fu">as.POSIXct</span>(<span class="st">&quot;2026-05-01&quot;</span>, <span class="at">tz =</span> <span class="st">&quot;UTC&quot;</span>),</span>
 <span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="at">end   =</span> <span class="fu">as.POSIXct</span>(<span class="st">&quot;2026-06-01&quot;</span>, <span class="at">tz =</span> <span class="st">&quot;UTC&quot;</span>)</span>
 <span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>)</span></code></pre></div>
+<p>For a range measured back from right now, <code>window</code> is
+shorter than computing a <code>start</code>. Write it as a whole number
+plus a unit — <code>m</code>, <code>h</code>, <code>d</code>, or
+<code>w</code> — up to one year (<code>&quot;365d&quot;</code> or
+<code>&quot;52w&quot;</code>):</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">zc_get_readings</span>(<span class="st">&quot;z6-00930&quot;</span>, <span class="at">window =</span> <span class="st">&quot;24h&quot;</span>)</span></code></pre></div>
+<p><code>window</code> replaces <code>start</code>/<code>end</code>
+rather than supplementing them; supplying both is an error.</p>
 <p><code>units</code> and <code>direction</code> map directly to the
 corresponding query parameters:</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">zc_get_readings</span>(<span class="st">&quot;z6-00930&quot;</span>, <span class="at">start =</span> <span class="fu">Sys.Date</span>() <span class="sc">-</span> <span class="dv">1</span>, <span class="at">units =</span> <span class="st">&quot;imperial&quot;</span>, <span class="at">direction =</span> <span class="st">&quot;descending&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="fu">zc_get_readings</span>(<span class="st">&quot;z6-00930&quot;</span>, <span class="at">start =</span> <span class="fu">Sys.Date</span>() <span class="sc">-</span> <span class="dv">1</span>, <span class="at">units =</span> <span class="st">&quot;imperial&quot;</span>, <span class="at">direction =</span> <span class="st">&quot;descending&quot;</span>)</span></code></pre></div>
 <p>For the full parameter reference and response field definitions, see
 <a href="https://docs.zentracloud.io/l/en/article/pep98lcz1h-get-device-readings">GET
 Device Readings</a>.</p>
@@ -438,26 +446,26 @@ Device Readings</a>.</p>
 <code>zc_label_errors()</code> joins human-readable labels onto a
 readings data frame, and <code>zc_error_codes()</code> returns the
 lookup table:</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="fu">zc_label_errors</span>(readings)</span>
-<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="fu">zc_error_codes</span>()</span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">zc_label_errors</span>(readings)</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="fu">zc_error_codes</span>()</span></code></pre></div>
 <p>For what each code means, see <a href="https://docs.zentracloud.io/l/en/article/l1uopg3wo7-device-sensor-error-codes">Device
 &amp; Sensor Error Codes</a>.</p>
 <p>The tidy long format works directly with the tidyverse:</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
-<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
-<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a></span>
-<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>readings <span class="sc">|&gt;</span></span>
-<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>  <span class="fu">filter</span>(measurement <span class="sc">==</span> <span class="st">&quot;Air Temperature&quot;</span>, error_code <span class="sc">==</span> <span class="dv">0</span>) <span class="sc">|&gt;</span></span>
-<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(datetime, value)) <span class="sc">+</span></span>
-<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
-<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">y =</span> <span class="fu">unique</span>(readings<span class="sc">$</span>unit[readings<span class="sc">$</span>measurement <span class="sc">==</span> <span class="st">&quot;Air Temperature&quot;</span>]))</span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>readings <span class="sc">|&gt;</span></span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>  <span class="fu">filter</span>(measurement <span class="sc">==</span> <span class="st">&quot;Air Temperature&quot;</span>, error_code <span class="sc">==</span> <span class="dv">0</span>) <span class="sc">|&gt;</span></span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(datetime, value)) <span class="sc">+</span></span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a>  <span class="fu">geom_line</span>() <span class="sc">+</span></span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">y =</span> <span class="fu">unique</span>(readings<span class="sc">$</span>unit[readings<span class="sc">$</span>measurement <span class="sc">==</span> <span class="st">&quot;Air Temperature&quot;</span>]))</span></code></pre></div>
 </div>
 </div>
 <div id="reshape-to-wide-format" class="section level2">
 <h2>5. Reshape to wide format</h2>
 <p><code>zc_pivot_wider()</code> produces one row per timestamp and one
 column per measurement — the familiar spreadsheet layout.</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="fu">zc_pivot_wider</span>(readings)</span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="fu">zc_pivot_wider</span>(readings)</span></code></pre></div>
 <p>The wide form drops the per-reading <code>unit</code> and
 <code>error_code</code> columns. Keep the long form when you need
 either.</p>
@@ -474,19 +482,19 @@ accessible to collaborators and non-R tools.</li>
 <li><code>store = NULL</code> — return-only. Fetches and hands back the
 data without persisting it, for loading into your own database.</li>
 </ul>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>store <span class="ot">&lt;-</span> <span class="fu">zc_store_csv</span>(<span class="st">&quot;data/zentra&quot;</span>)</span>
-<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a></span>
-<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="co"># First run — backfill from `start`, or from each device&#39;s first measurement if omitted:</span></span>
-<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="fu">zc_sync</span>(<span class="st">&quot;z6-00930&quot;</span>, <span class="at">store =</span> store, <span class="at">start =</span> <span class="fu">Sys.Date</span>() <span class="sc">-</span> <span class="dv">30</span>)</span>
-<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a></span>
-<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a><span class="co"># Later runs — only what&#39;s new since last time:</span></span>
-<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="fu">zc_sync</span>(<span class="st">&quot;z6-00930&quot;</span>, <span class="at">store =</span> store)</span>
-<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a></span>
-<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a><span class="co"># Every device your token can access, in one call:</span></span>
-<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a><span class="fu">zc_sync</span>(<span class="at">store =</span> store)</span>
-<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a></span>
-<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a><span class="co"># Read the accumulated record back into R:</span></span>
-<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a>all_data <span class="ot">&lt;-</span> <span class="fu">zc_store_read</span>(store)</span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>store <span class="ot">&lt;-</span> <span class="fu">zc_store_csv</span>(<span class="st">&quot;data/zentra&quot;</span>)</span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a></span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a><span class="co"># First run — backfill from `start`, or from each device&#39;s first measurement if omitted:</span></span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="fu">zc_sync</span>(<span class="st">&quot;z6-00930&quot;</span>, <span class="at">store =</span> store, <span class="at">start =</span> <span class="fu">Sys.Date</span>() <span class="sc">-</span> <span class="dv">30</span>)</span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a></span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a><span class="co"># Later runs — only what&#39;s new since last time:</span></span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="fu">zc_sync</span>(<span class="st">&quot;z6-00930&quot;</span>, <span class="at">store =</span> store)</span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a></span>
+<span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a><span class="co"># Every device your token can access, in one call:</span></span>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a><span class="fu">zc_sync</span>(<span class="at">store =</span> store)</span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a></span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a><span class="co"># Read the accumulated record back into R:</span></span>
+<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a>all_data <span class="ot">&lt;-</span> <span class="fu">zc_store_read</span>(store)</span></code></pre></div>
 <p>With a store, <code>zc_sync()</code> returns a per-device summary
 (rows added, latest timestamp, status). With <code>store = NULL</code>
 it returns the combined new readings instead.</p>
@@ -497,12 +505,12 @@ it returns the combined new readings instead.</p>
 the everyday commands for viewing, filtering, summarising, and exporting
 your readings — also published online as <a href="https://docs.zentracloud.io/l/en/article/bohtqxbqrm-working-with-your-data-in-r">Working
 with Your Data in R</a>:</p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="fu">vignette</span>(<span class="st">&quot;working-with-data&quot;</span>, <span class="at">package =</span> <span class="st">&quot;zentraR&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="fu">vignette</span>(<span class="st">&quot;working-with-data&quot;</span>, <span class="at">package =</span> <span class="st">&quot;zentraR&quot;</span>)</span></code></pre></div>
 <p>To run syncs automatically — on project open, daily, or weekly — see
 the <em>Scheduling automatic syncs</em> vignette, also published online
 as <a href="https://docs.zentracloud.io/l/en/article/f2g5u9hc2r-scheduling-automatic-syncs">Scheduling
 Automatic Syncs</a>:</p>
-<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="fu">vignette</span>(<span class="st">&quot;scheduling&quot;</span>, <span class="at">package =</span> <span class="st">&quot;zentraR&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="fu">vignette</span>(<span class="st">&quot;scheduling&quot;</span>, <span class="at">package =</span> <span class="st">&quot;zentraR&quot;</span>)</span></code></pre></div>
 </div>
 
 

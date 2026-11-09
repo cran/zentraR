@@ -126,6 +126,17 @@ zc_get_readings(
 )
 ```
 
+For a range measured back from right now, `window` is shorter than computing a
+`start`. Write it as a whole number plus a unit — `m`, `h`, `d`, or `w` — up to
+one year (`"365d"` or `"52w"`):
+
+```{r}
+zc_get_readings("z6-00930", window = "24h")
+```
+
+`window` replaces `start`/`end` rather than supplementing them; supplying both
+is an error.
+
 `units` and `direction` map directly to the corresponding query parameters:
 
 ```{r}
